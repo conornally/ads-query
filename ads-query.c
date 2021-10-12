@@ -150,6 +150,8 @@ int main(int argc, char *argv[])
 	cJSON *json=NULL;
 
 	memset(q,'\0',1028);
+	memset(token,'\0',128);
+
 	writebuf.buf=malloc(1);
 	writebuf.size=0;
 
@@ -203,6 +205,7 @@ int main(int argc, char *argv[])
 	if(!token[0])
 	{
 		char *tok=getenv("NASAADSTOKEN");
+		if(verbose && tok) printf("Taking token from environment: %s\n",tok);
 		if(!tok)
 		{
 			fprintf(stderr, "No NASAADS API token supplied.\n");
@@ -297,31 +300,34 @@ int main(int argc, char *argv[])
 
 
 		//BIBTEX
-		char *post_data=malloc(1028);
-		if(verbose)printf("Downloading:bibtex\n");
-		snprintf(post_data,1028,"{\"bibcode\":[\"%s\"]}",selected->bibcode);
-		snprintf(url,1028,"%sbibtex",export);
-
-		free(writebuf.buf);
-		writebuf.buf=malloc(1);
-		writebuf.size=0;
-		curl_easy_setopt(curl, CURLOPT_URL,url);
-		curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
-		curl_easy_setopt(curl,CURLOPT_WRITEDATA,(void*)&writebuf);
-		curl_easy_setopt(curl,CURLOPT_POST,1L);
-		curl_easy_setopt(curl,CURLOPT_POSTFIELDS,post_data);
-		curl_easy_perform(curl);
-
-		json=cJSON_Parse(writebuf.buf);
-		cJSON *export=cJSON_GetObjectItemCaseSensitive(json,"export");
-
-		if(!(fp=fopen("bibtex.bib","w")))
+		if(bibtex)
 		{
-			perror("bibtext.bib");
-			exit(1);
+			char *post_data=malloc(1028);
+			if(verbose)printf("Downloading:bibtex\n");
+			snprintf(post_data,1028,"{\"bibcode\":[\"%s\"]}",selected->bibcode);
+			snprintf(url,1028,"%sbibtex",export);
+
+			free(writebuf.buf);
+			writebuf.buf=malloc(1);
+			writebuf.size=0;
+			curl_easy_setopt(curl, CURLOPT_URL,url);
+			curl_easy_setopt(curl,CURLOPT_HTTPHEADER,headers);
+			curl_easy_setopt(curl,CURLOPT_WRITEDATA,(void*)&writebuf);
+			curl_easy_setopt(curl,CURLOPT_POST,1L);
+			curl_easy_setopt(curl,CURLOPT_POSTFIELDS,post_data);
+			curl_easy_perform(curl);
+
+			json=cJSON_Parse(writebuf.buf);
+			cJSON *export=cJSON_GetObjectItemCaseSensitive(json,"export");
+
+			if(!(fp=fopen("bibtex.bib","w")))
+			{
+				perror("bibtext.bib");
+				exit(1);
+			}
+			fputs(export->valuestring,fp);
+			fclose(fp);
 		}
-		fputs(export->valuestring,fp);
-		fclose(fp);
 
 	}
 	else
